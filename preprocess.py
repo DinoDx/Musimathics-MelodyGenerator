@@ -9,6 +9,7 @@ KERN_DATASET_PATH = "deutschl/erk"
 SAVE_DIR = "dataset"
 DATASET_FILE = "file_dataset"
 MAPPING_PATH = "mapping.json"
+SEQUENCE_LENGTH = 64
 
 ACCEPTABLE_DURATION =[
     0.25,
@@ -22,7 +23,7 @@ ACCEPTABLE_DURATION =[
 ]
 
 env = environment.Environment(forcePlatform="windows")
-env["musicxmlPath"] = "C:\\Program Files\MuseScore 4\\bin\\MuseScore4.exe"
+env["musicxmlPath"] = "C:\\Program Files\\MuseScore 4\\bin\\MuseScore4.exe"
 
 def preprocess(dataset_path):
     #Load dataset
@@ -124,7 +125,7 @@ def create_single_file_dataset(dataset_path, file_dataset_path, sequence_lenght)
 
             song = load(file_path)
             
-            songs = songs + song + song_delimiter
+            songs = songs + song + " " + song_delimiter
 
         songs = songs[:-1]
     
@@ -170,11 +171,18 @@ def generate_training_sentences(sequence_length):
 
     for i in range(num_sequences):
         input.append(int_songs[i:i+sequence_length])
-        target.append(i+sequence_length)
+        target.append(int_songs[i+sequence_length])
+
+    vocabulary_size = len(set(int_songs))
+    input = keras.utils.to_categorical(input, num_classes=vocabulary_size)
+    target = np.array(target)
+
+    return input, target
 
 
 if __name__=="__main__":
     preprocess(KERN_DATASET_PATH)
-    songs = create_single_file_dataset(SAVE_DIR, DATASET_FILE, 64)
+    songs = create_single_file_dataset(SAVE_DIR, DATASET_FILE, SEQUENCE_LENGTH)
     create_mapping(songs, MAPPING_PATH)
-    convert_song_to_int(songs)
+    input, target = generate_training_sentences(SEQUENCE_LENGTH)
+    
